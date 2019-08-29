@@ -1,7 +1,7 @@
 import csv
 import os
-from collections import namedtuple
 
+import pandas as pd
 from flask import Flask, request
 from requests import Session
 from const import status
@@ -29,9 +29,8 @@ def images_info():
         result = {}         # This should be an array instead of an dict.
         session = Session() # Global session for requesting all images
         with open(filepath, 'r') as file:
-            ImageTSV = namedtuple('ImageTSV', ['id', 'url'])
-            images = map(ImageTSV._make, csv.reader(file, delimiter='\t'))
-            for image in images:
+            images = pd.read_csv(file, delimiter='\t')
+            for image in images.itertuples():
                 try:
                     image_info = ImageInfo(image.id, url=image.url, session=session).to_dict()
                     result[image.id] = {
