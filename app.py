@@ -3,6 +3,7 @@ import os
 from collections import namedtuple
 
 from flask import Flask, request
+from requests import Session
 from const import status
 from exceptions import ImageInfoError
 from models import ImageInfo
@@ -25,13 +26,14 @@ def images_info():
 
     filepath = data.get('filepath', '')
     if os.path.exists(filepath):
-        result = {} # This should be an array instead of an dict.
+        result = {}         # This should be an array instead of an dict.
+        session = Session() # Global session for requesting all images
         with open(filepath, 'r') as file:
             ImageTSV = namedtuple('ImageTSV', ['id', 'url'])
             images = map(ImageTSV._make, csv.reader(file, delimiter='\t'))
             for image in images:
                 try:
-                    image_info = ImageInfo(image.id, url=image.url).to_dict()
+                    image_info = ImageInfo(image.id, url=image.url, session=session).to_dict()
                     result[image.id] = {
                         "url": image.url, 
                         "image_info": image_info
