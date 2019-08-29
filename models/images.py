@@ -1,7 +1,8 @@
 from io import BytesIO
 from PIL import Image
 from exceptions import ImageInfoError
-from requests import get as GET
+from requests.exceptions import ReadTimeout
+from requests import Session
 
 
 class ImageInfo(object):
@@ -9,9 +10,10 @@ class ImageInfo(object):
     Stores the information of an image.
     """
 
-    def __init__(self, id, url):
+    def __init__(self, id, url, session=None):
         self.id = id
         self.url = url
+        self._session = session if session else Session()
         self._img = self._get_image()
 
     def _get_image(self):
@@ -21,7 +23,10 @@ class ImageInfo(object):
         Note: An image is considered valid if it was able to be downloaded from
         the given URL and it was able to be opened with PIL.
         """
-        response = GET(self.url, timeout=10)
+        try:
+            response = self._session.get(self.url, timeout=10)
+        except ReadTimeout:
+            raise ImageInfoError('Timeout while requesting Image.')
         if response:
             try:
                 return Image.open(BytesIO(response.content))
@@ -36,8 +41,12 @@ class ImageInfo(object):
         Note: if this method is called the _img attribute will not hold the
         Image class anymore for avoiding memory leaks.
         """
+        try:
+            image_size = len(self._img.tobytes())
+        except IOError as e:
+            raise ImageInfoError(str(e))
         result = {
-            "image_size": len(self._img.tobytes()),
+            "image_size": image_size,
             "image_dimension": self._img.size,
             "image_format": self._img.format,
         }
