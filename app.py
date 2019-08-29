@@ -1,8 +1,10 @@
 import csv
 import os
+import concurrent.futures
 
 import pandas as pd
 from flask import Flask, request
+from redis import Redis
 from requests import Session
 from const import status
 from exceptions import ImageInfoError
@@ -39,4 +41,25 @@ def images_info():
 
 @app.route('/images_info_async/', methods=["POST"])
 def images_info_async():
-    pass
+    data = request.get_json()
+    if data is None:
+        return {"error": "Data is not provided"}, status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    filepath = data.get('filepath', '')
+    if os.path.exists(filepath):
+        result = {}         # This should be an array instead of an dict.
+        session = Session() # Global session for requesting all images
+        with open(filepath, 'r') as file:
+            images = pd.read_csv(file, delimiter='\t')
+            # TODO: avoid harded values, max_workers.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                future_img = {
+                    executor.submit(ImageInfo(img.id, url=img.url, session=session).to_dict): img.id
+                    for img in images.itertuples()
+                }
+                for future in concurrent.futures.as_completed(future_img):
+                    img_id = future_img[future]
+                    result[img_id] = future.result()
+        return result, status.HTTP_200_OK
+
+    return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
