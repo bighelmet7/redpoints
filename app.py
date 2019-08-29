@@ -31,18 +31,8 @@ def images_info():
         with open(filepath, 'r') as file:
             images = pd.read_csv(file, delimiter='\t')
             for image in images.itertuples():
-                try:
-                    image_info = ImageInfo(image.id, url=image.url, session=session).to_dict()
-                    result[image.id] = {
-                        "url": image.url, 
-                        "image_info": image_info
-                    }
-                except ImageInfoError as e:
-                    result[image.id] = {
-                        "url": image.url, 
-                        "image_info": '',
-                        "error": str(e)
-                    }
+                    image_info = ImageInfo(image.id, url=image.url, session=session)
+                    result[image.id] = image_info.to_dict()
         return result, status.HTTP_200_OK
 
     return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
