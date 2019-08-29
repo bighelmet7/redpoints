@@ -10,7 +10,7 @@ from models import ImageInfo
 app = Flask(__name__)
 
 @app.errorhandler(status.HTTP_500_INTERNAL_SERVER_ERROR)
-def handler_unexpected_error():
+def handler_unexpected_error(error):
     return 'Unexpected error\n'
 
 @app.route('/ping/')
