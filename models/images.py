@@ -13,8 +13,8 @@ class ImageInfo(object):
     def __init__(self, id, url, session=None):
         self.id = id
         self.url = url
+        self.image_size = None
         self._session = session if session else Session()
-        self._img = self._get_image()
 
     def _get_image(self):
         """
@@ -29,6 +29,7 @@ class ImageInfo(object):
             raise ImageInfoError('Timeout while requesting Image.')
         if response:
             try:
+                self.image_size = len(response.content)
                 return Image.open(BytesIO(response.content))
             except IOError:
                 raise ImageInfoError('Image could not be opened.')
@@ -37,18 +38,23 @@ class ImageInfo(object):
     def to_dict(self):
         """
         Returns a dictionary with the current image info.
-
-        Note: if this method is called the _img attribute will not hold the
-        Image class anymore for avoiding memory leaks.
         """
         try:
-            image_size = len(self._img.tobytes())
-        except IOError as e:
-            raise ImageInfoError(str(e))
-        result = {
-            "image_size": image_size,
-            "image_dimension": self._img.size,
-            "image_format": self._img.format,
-        }
-        self._img.close()
+            img = self._get_image()
+            result = {
+                "url": self.url,
+                "image_info": {
+                    "image_size": self.image_size,
+                    "image_dimension": img.size,
+                    "image_format": img.format,
+                }
+            }
+        except ImageInfoError as e:
+            result = {
+                "url": self.url,
+                "image_info": "",
+                "error": str(e),
+            }
+        else:
+            img.close()
         return result
