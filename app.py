@@ -22,7 +22,7 @@ def ping():
 def images_info():
     data = request.get_json()
     if data is None:
-        return {"error": "data is not provided"}, status.HTTP_400_BAD_REQUEST
+        return {"error": "Data is not provided"}, status.HTTP_422_UNPROCESSABLE_ENTITY
 
     filepath = data.get('filepath', '')
     if os.path.exists(filepath):
@@ -46,7 +46,7 @@ def images_info():
                     }
         return result, status.HTTP_200_OK
 
-    return {"error": "Invalid input file url"}, 422
+    return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
 
 @app.route('/images_info_async/', methods=["POST"])
 def images_info_async():
