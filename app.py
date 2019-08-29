@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 @app.errorhandler(status.HTTP_500_INTERNAL_SERVER_ERROR)
 def handler_unexpected_error(error):
-    return 'Unexpected error\n'
+    return 'Unexpected error\n', status.HTTP_500_INTERNAL_SERVER_ERROR
 
 @app.route('/ping/')
 def ping():
