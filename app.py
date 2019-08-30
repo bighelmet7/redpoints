@@ -1,21 +1,26 @@
+import concurrent.futures
 import csv
 import os
-import concurrent.futures
 
 import pandas as pd
-import simplejson
 from flask import Flask, request
 from redis import Redis
-from requests import Session
+from simplejson import dumps
+
 from const import status
 from exceptions import ImageInfoError
+from mlteam import create_app
+from mlteam.extensions import session
 from models import ImageInfo, BatchImage
 
-app = Flask(__name__)
-# TODO: config file with all this global values.
-# session = Session()
-conn = Redis(host='localhost', port=6379, db=0)
-MAX_WORKERS = 6
+app = create_app()
+with app.app_context():
+    redis_conn = Redis(
+        host=app.config['REDIS_HOST'],
+        port=app.config['REDIS_PORT'],
+        db=app.config['REDIS_DB']
+    )
+MAX_WORKERS = app.config['MAX_WORKERS_CONCURRENCY']
 
 @app.errorhandler(status.HTTP_500_INTERNAL_SERVER_ERROR)
 def handler_unexpected_error(error):
@@ -34,7 +39,6 @@ def images_info():
     filepath = data.get('filepath', '')
     if os.path.exists(filepath):
         result = {}         # This should be an array instead of an dict.
-        session = Session() # Global session for requesting all images
         with open(filepath, 'r') as file:
             images = pd.read_csv(file, delimiter='\t')
             for image in images.itertuples():
@@ -53,7 +57,6 @@ def images_info_async():
     filepath = data.get('filepath', '')
     if os.path.exists(filepath):
         result = {}         # This should be an array instead of an dict.
-        session = Session() # Global session for requesting all images
         with open(filepath, 'r') as file:
             images = pd.read_csv(file, delimiter='\t')
             with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -63,7 +66,10 @@ def images_info_async():
                 }
                 for future in concurrent.futures.as_completed(future_img):
                     img_id = future_img[future]
-                    conn.rpush('queue:images', simplejson.dumps({img_id: future_img[future]}))
+                    redis_conn.rpush(
+                        'queue:images',
+                        dumps({img_id: future.result()})
+                    )
         return {"ok": "Processing Images"}, status.HTTP_200_OK
 
     return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -80,11 +86,10 @@ def batch_size():
         if batch_size == 0:
             # If there is not batch size, all the images are processed.
             return {"ok": "Processing Images"}, status.HTTP_200_OK
-        session = Session() # Global session for requesting all images
         with open(filepath, 'r') as file:
             images = pd.read_csv(file, delimiter='\t')
             batch_images = BatchImage(images=images.itertuples(), batch_size=batch_size, session=session)
-            batch_images.resize_batch_images(redis_conn=conn)
+            batch_images.resize_batch_images(redis_conn=redis_conn)
         return {"ok": "Processing Images"}, status.HTTP_200_OK
 
     return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
