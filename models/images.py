@@ -1,8 +1,14 @@
+import numpy as np
+from collections import deque
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageFile
 from exceptions import ImageInfoError
 from requests.exceptions import ReadTimeout
 from requests import Session
+from simplejson import dumps
+
+# ISSUE: https://github.com/python-pillow/Pillow/issues/1510
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class ImageInfo(object):
@@ -35,6 +41,22 @@ class ImageInfo(object):
                 raise ImageInfoError('Image could not be opened.')
         raise ImageInfoError('Image could not be requested.')
 
+    def resize(self, x=64, y=64):
+        """
+        Resize the image x * y. Returns a NumPy array of size
+        (n_channels, x, y) of the image resized and the n_channels of the image.
+        """
+        try:
+            img = self._get_image()
+        except ImageInfoError as e:
+            return np.zeros(1).tolist(), 0
+        r_img = img.resize((x, y,))
+        result = np.array(r_img)
+        n_channels = len(r_img.getbands())
+        img.close()
+        r_img.close()
+        return result.tolist(), n_channels
+
     def to_dict(self):
         """
         Returns a dictionary with the current image info.
@@ -58,3 +80,44 @@ class ImageInfo(object):
         else:
             img.close()
         return result
+
+
+class BatchImage(object):
+    """
+    Represents a batch of images.
+    """
+    def __init__(self, images=[], batch_size=0, session=None):
+        self.batch_images = images
+        self.batch_size = batch_size
+        self._session = session if session else Session()
+
+    def resize_batch_images(self, x=64, y=64, redis_conn=None):
+        """
+        Resize all images to x * y in batches of 'batch_size'. If redis_conn
+        is not None, the values are pushed to a queue:batch.
+        """
+        counter = 0
+        images = deque()
+        for image in self.batch_images:
+            if counter < self.batch_size:
+                img = ImageInfo(image.id, image.url, session=self._session)
+                # if its a batch every image has its own channel but the result 
+                # should be: {batch_size: '(batch_size, ch, 64, 64)', ...}
+                r_img, n_channels = img.resize(x, y)
+                images.append(r_img)
+                counter += 1
+            if counter == self.batch_size:
+                if redis_conn is not None:
+                    batch_size = '({batch_size}, {ch}, {x}, {y})'.format(
+                        batch_size=self.batch_size,
+                        ch=n_channels,
+                        x=x,
+                        y=y
+                    )
+                    result = {
+                        'batch_size': batch_size,
+                        'images': list(images)
+                    }
+                    redis_conn.rpush('queue:batch', dumps(result))
+                counter = 0
+                images.clear()
