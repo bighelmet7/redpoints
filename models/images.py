@@ -1,11 +1,13 @@
 import numpy as np
 from collections import deque
 from io import BytesIO
+
 from PIL import Image, ImageFile
-from exceptions import ImageInfoError
 from requests.exceptions import ReadTimeout
-from requests import Session
 from simplejson import dumps
+
+from exceptions import ImageInfoError
+from mlteam.extensions import session as ext_session
 
 # ISSUE: https://github.com/python-pillow/Pillow/issues/1510
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -20,7 +22,7 @@ class ImageInfo(object):
         self.id = id
         self.url = url
         self.image_size = None
-        self._session = session if session else Session()
+        self._session = session if session else ext_session
 
     def _get_image(self):
         """
@@ -89,7 +91,7 @@ class BatchImage(object):
     def __init__(self, images=[], batch_size=0, session=None):
         self.batch_images = images
         self.batch_size = batch_size
-        self._session = session if session else Session()
+        self._session = session if session else ext_session
 
     def resize_batch_images(self, x=64, y=64, redis_conn=None):
         """
@@ -108,14 +110,14 @@ class BatchImage(object):
                 counter += 1
             if counter == self.batch_size:
                 if redis_conn is not None:
-                    batch_size = '({batch_size}, {ch}, {x}, {y})'.format(
+                    batch = '({batch_size}, {ch}, {x}, {y})'.format(
                         batch_size=self.batch_size,
                         ch=n_channels,
                         x=x,
                         y=y
                     )
                     result = {
-                        'batch_size': batch_size,
+                        'batch_size': batch,
                         'images': list(images)
                     }
                     redis_conn.rpush('queue:batch', dumps(result))
