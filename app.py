@@ -9,9 +9,11 @@ from redis import Redis
 from requests import Session
 from const import status
 from exceptions import ImageInfoError
-from models import ImageInfo
+from models import ImageInfo, BatchImage
 
 app = Flask(__name__)
+# TODO: config file with all this global values.
+# session = Session()
 conn = Redis(host='localhost', port=6379, db=0)
 MAX_WORKERS = 6
 
@@ -66,6 +68,23 @@ def images_info_async():
 
     return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
 
-@app.route('/batch_size/', methods=["POST"])
+@app.route('/batch_predict/', methods=["POST"])
 def batch_size():
-    pass
+    data = request.get_json()
+    if data is None:
+        return {"error": "Data is not provided"}, status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    filepath = data.get('filepath', '')
+    if os.path.exists(filepath):
+        batch_size = data.get('batch_size', 0)
+        if batch_size == 0:
+            # If there is not batch size, all the images are processed.
+            return {"ok": "Processing Images"}, status.HTTP_200_OK
+        session = Session() # Global session for requesting all images
+        with open(filepath, 'r') as file:
+            images = pd.read_csv(file, delimiter='\t')
+            batch_images = BatchImage(images=images.itertuples(), batch_size=batch_size, session=session)
+            batch_images.resize_batch_images(redis_conn=conn)
+        return {"ok": "Processing Images"}, status.HTTP_200_OK
+
+    return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
