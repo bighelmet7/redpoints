@@ -110,14 +110,14 @@ class BatchImage(object):
                 counter += 1
             if counter == self.batch_size:
                 if redis_conn is not None:
-                    batch = '({batch_size}, {ch}, {x}, {y})'.format(
+                    batch_dimension = '({batch_size}, {ch}, {x}, {y})'.format(
                         batch_size=self.batch_size,
                         ch=n_channels,
                         x=x,
                         y=y
                     )
                     result = {
-                        'batch_size': batch,
+                        'batch_dimension': batch_dimension,
                         'images': list(images)
                     }
                     redis_conn.rpush('queue:batch', dumps(result))
