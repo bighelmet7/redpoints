@@ -34,6 +34,8 @@ class ImagesInfoResource(Resource):
                         result[image.id] = image_info.to_dict()
             return result, status.HTTP_200_OK
 
+        return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
+
 
 class ImagesInfoAsyncResource(Resource):
     """
@@ -63,6 +65,8 @@ class ImagesInfoAsyncResource(Resource):
                             dumps({img_id: future.result()})
                         )
             return {"ok": "Processing Images"}, status.HTTP_200_OK
+
+        return {"error": "Invalid input file url"}, status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 class BatchPredictResource(Resource):
