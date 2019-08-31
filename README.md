@@ -9,3 +9,4 @@ Techincal exam
 - testing
 - docker compose
 - documentantion
+- LAST: added module v1 where lives the API.
