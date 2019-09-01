@@ -15,8 +15,10 @@ Technical exam that emulates a small service working with images.
  - Without docker:
  
 
+    ```bash
     virtualenv --python=python3 redpoints/.env && source redpoints/.env/bin/activate
-
+    ```
+  
     git clone https://github.com/bighelmet7/redpoints.git redpoints/src
 
     cd redpoinst/src && pip install -r requirements
