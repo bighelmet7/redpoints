@@ -1,0 +1,16 @@
+version: '3'
+services:
+  web:
+    build: .
+    environment:
+      - APPLICATION_ENV=mlteam.config.ProductionConfig
+    volumes:
+      - ./dependencies:/application/vol/dependencies
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
