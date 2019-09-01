@@ -66,6 +66,7 @@ Docker.
 | /api/v1/images_info_async | POST | {"filepath": "target"} |
 | /api/v1/batch_predict | POST | {"filepath": "target", "batch_size": integer} |
 
+**NOTE**: the filepath in this case is /application/vol/dependencies/images.tsv, so any new tsv file should be cp to this route. Also you could access directly through /application/dependencies/images.tsv
 
 ## Timing
 
