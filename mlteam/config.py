@@ -8,7 +8,9 @@ class Config(object):
     MAX_WORKERS_CONCURRENCY = 2
 
 
-class ProductionConfig(Config): pass
+class ProductionConfig(Config):
+    REDIS_URL = "redis://redis:6379/0"
+    MAX_WORKERS_CONCURRENCY = 4
 
 
 class DevelopmentConfig(Config):
