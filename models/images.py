@@ -94,7 +94,7 @@ class BatchImage(object):
         self.batch_size = batch_size
         self._session = session if session else ext_session
 
-    def _send_to_redis_queue(self, n_channels, x, y, images, redis_conn):
+    def _send_to_redis_queue(self, n_channels, x, y, images, redis_conn, queue=BATCH_PREDICT):
         batch_dimension = '({batch_size}, {ch}, {x}, {y})'.format(
             batch_size=self.batch_size,
             ch=n_channels,
@@ -105,12 +105,13 @@ class BatchImage(object):
             'batch_dimension': batch_dimension,
             'images': list(images)
         }
-        redis_conn.rpush(BATCH_PREDICT, dumps(result))
+        if redis_conn.ping():
+            redis_conn.rpush(queue, dumps(result))
 
-    def resize_batch_images(self, x=64, y=64, redis_conn=None):
+    def resize_batch_images(self, x=64, y=64, redis_conn=None, queue=BATCH_PREDICT):
         """
         Resize all images to x * y in batches of 'batch_size'. If redis_conn
-        is not None, the values are pushed to a queue:batch.
+        is not None, the values are pushed to the given queue.
         """
         counter = 0
         n_channels = 0
@@ -125,10 +126,10 @@ class BatchImage(object):
                 counter += 1
             if counter == self.batch_size:
                 if redis_conn is not None:
-                    self._send_to_redis_queue(n_channels, x, y, images, redis_conn)
+                    self._send_to_redis_queue(n_channels, x, y, images, redis_conn, queue)
                 images.clear()
                 counter = 0
         if len(images):
             if redis_conn is not None:
-                self._send_to_redis_queue(n_channels, x, y, images, redis_conn)
+                self._send_to_redis_queue(n_channels, x, y, images, redis_conn, queue)
             images.clear()
