@@ -18,19 +18,22 @@ Technical exam that emulates a small service working with images.
     ```bash
     virtualenv --python=python3 redpoints/.env && source redpoints/.env/bin/activate
     ```
-  
+    ```bash
     git clone https://github.com/bighelmet7/redpoints.git redpoints/src
-
+    ```
+    ```bash
     cd redpoinst/src && pip install -r requirements
-
+    ```
+    ```bash
     python -m unittest models/tests/test_images.py && python -m unittest v1/resources/tests/test_images.py
-
+    ```
+    ```bash
     gunicorn -b 0.0.0.0:5000 application:app
-
+    ```
  - With docker:
-
+    ```bash
     docker-compose up
-
+    ```
 ## Project & concept
 
 There is not templates for rendering, because this services is mostly an API logics.
@@ -68,25 +71,28 @@ Docker.
 
 This could be different for each computer, bandwidth, ... It is just an global understanding.
 
+```bash
 bighelmet7@Abners-MacBook-Pro ~/redpoints/src (master) $ time curl -XPOST http://localhost:5000/api/v1/images_info/ -H "Content-Type: application/json" --data-binary '{"filepath": "/application/vol/dependencies/images.tsv"}'
 real	4m30.942s
 user	0m0.014s
 sys	0m0.029s
-
+```
+```bash
 bighelmet7@Abners-MacBook-Pro ~/redpoints/src (master) $ time curl -XPOST http://localhost:5000/api/v1/images_info_async/ -H "Content-Type: application/json" --data-binary '{"filepath": "/application/vol/dependencies/images.tsv"}'
 {"ok": "Processing Images"}
 
 real	0m58.715s
 user	0m0.009s
 sys	0m0.009s
-
+```
+```bash
 bighelmet7@Abners-MacBook-Pro ~/redpoints/src (master) $ time curl -XPOST http://localhost:5000/api/v1/batch_predict/ -H "Content-Type: application/json" --data-binary '{"filepath": "/application/vol/dependencies/images.tsv", "batch_size": 5}'
 {"ok": "Processing Images"}
 
 real	14m33.282s
 user	0m0.026s
 sys	0m0.048s
-
+```
 
 ## Update
 
